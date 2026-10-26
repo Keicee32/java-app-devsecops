@@ -36,7 +36,10 @@ jobs:
 
       - name: Install Official Trivy Binary via Script
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.50.0
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh -o install.sh
+          chmod +x install.sh
+          sudo ./install.sh -b /usr/bin v0.50.0
+
       # Download and install the specific native Linux binary release safely
       #- name: Install Official Trivy Binary
       #  run: |
@@ -44,6 +47,7 @@ jobs:
       #    sudo dpkg -i trivy_0.50.0_Linux-64bit.deb
 
       # Download the template and execute the binary locally on the host machine
+
       - name: Run Trivy Binary Scan
         run: |
           wget -q https://githubusercontent.com
