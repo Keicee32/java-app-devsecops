@@ -14,16 +14,25 @@ jobs:
       contents: read
 
     steps:
+      # Step 1: Checkout repository
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up Java and Maven
+      # Step 2: Configure Java
+      - name: Set up Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
           cache: maven
 
+      # Step 3: Pin Maven version
+      - name: Set up Maven 3.9.11
+        uses: stCarolas/setup-maven@v5
+        with:
+          maven-version: 3.9.11
+
+      # Step 4: Configure Maven repository
       - name: Configure Maven Local Repository
         shell: bash
         run: |
@@ -31,15 +40,14 @@ jobs:
 
           cat > "$HOME/.m2/settings.xml" <<EOF
           <settings xmlns="http://maven.apache.org/SETTINGS/1.2.0">
-          <localRepository>${HOME}/.m2/repository</localRepository>
+            <localRepository>${HOME}/.m2/repository</localRepository>
           </settings>
           EOF
 
-          echo "Maven repository configured:"
+          echo "Maven settings:"
           cat "$HOME/.m2/settings.xml"
 
-      # License Finder automatically prefers mvnw if present.
-      # Use the runner's installed Maven for this scan.
+      # Step 5: Use installed Maven instead of wrapper
       - name: Use System Maven
         shell: bash
         run: |
@@ -47,12 +55,17 @@ jobs:
             mv mvnw mvnw.disabled
           fi
 
+          echo "Maven executable:"
+          command -v mvn
+
+          echo "Maven version:"
           mvn -version
 
+      # Step 6: Download project dependencies
       - name: Prepare Maven Dependencies
         shell: bash
         run: |
-          mkdir -p "$HOME/.m2/repository"
+          set -euo pipefail
 
           mvn -B -ntp dependency:go-offline
 
@@ -60,6 +73,30 @@ jobs:
             -Dartifact=ch.qos.logback:logback-classic:1.2.3:pom \
             -Dtransitive=false
 
+      # Step 7: Diagnose Maven repository resolution
+      - name: Diagnose Maven Configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "=== Maven version ==="
+          mvn -version
+
+          echo "=== Maven repository without quiet mode ==="
+          mvn -B help:evaluate \
+            -Dexpression=settings.localRepository \
+            -DforceStdout
+
+          echo "=== Maven repository with quiet mode ==="
+          mvn -q help:evaluate \
+            -Dexpression=settings.localRepository \
+            -DforceStdout
+
+          echo
+          echo "=== Maven settings location ==="
+          ls -l "$HOME/.m2/settings.xml"
+
+      # Step 8: Validate Maven repository
       - name: Validate Maven Repository
         shell: bash
         run: |
@@ -77,7 +114,10 @@ jobs:
               ;;
             *)
               echo "::error::Invalid Maven repository path"
-              echo "License Finder cannot resolve dependency POMs."
+
+              echo "=== Effective Maven settings ==="
+              mvn -B help:effective-settings
+
               exit 1
               ;;
           esac
@@ -91,6 +131,7 @@ jobs:
 
           echo "Logback POM verified successfully"
 
+      # Step 9: Run License Finder
       - name: Run License Finder
         uses: jmservera/license-finder-action@main
         with:
@@ -101,6 +142,7 @@ jobs:
             junit-jupiter-engine,javax.annotation-api
           report-name: license_finder_report.xml
 
+      # Step 10: Publish license compliance results
       - name: Publish License Compliance Results
         if: ${{ !cancelled() && hashFiles('license_finder_report.xml') != '' }}
         uses: EnricoMi/publish-unit-test-result-action@v2
@@ -111,6 +153,7 @@ jobs:
           comment_mode: off
           job_summary: 'true'
 
+      # Step 11: Upload report
       - name: Upload License Compliance Report
         if: always()
         uses: actions/upload-artifact@v7

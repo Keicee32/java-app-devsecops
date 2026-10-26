@@ -1,3 +1,4 @@
+
 name: 30 License Compliance
 
 on:
@@ -6,56 +7,115 @@ on:
 
 jobs:
   license-finder:
-  # Using https://github.com/pivotal/LicenseFinder
+    name: License Compliance Scan
     runs-on: ubuntu-latest
-    steps:
-      - name: 'Checkout Repository'
-        uses: actions/checkout@v3
 
-      - name: 'License Finder fix with mvnw'
-        run: rm mvnw
-      
-      - name: Debug Maven dependency resolution
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java and Maven
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Configure Maven Local Repository
+        shell: bash
         run: |
-          echo "Maven version:"
+          mkdir -p "$HOME/.m2/repository"
+
+          cat > "$HOME/.m2/settings.xml" <<EOF
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.2.0">
+          <localRepository>${HOME}/.m2/repository</localRepository>
+          </settings>
+          EOF
+
+          echo "Maven repository configured:"
+          cat "$HOME/.m2/settings.xml"
+
+      # License Finder automatically prefers mvnw if present.
+      # Use the runner's installed Maven for this scan.
+      - name: Use System Maven
+        shell: bash
+        run: |
+          if [ -f mvnw ]; then
+            mv mvnw mvnw.disabled
+          fi
+
           mvn -version
 
-          echo "Maven local repository:"
-          mvn -q help:evaluate \
-            -Dexpression=settings.localRepository \
-            -DforceStdout
-          echo
-
-          echo "Checking Logback POM:"
-          ls -l "$HOME/.m2/repository/ch/qos/logback/logback-classic/1.2.3/logback-classic-1.2.3.pom" || true
-
-      - name: Resolve Maven dependencies
+      - name: Prepare Maven Dependencies
+        shell: bash
         run: |
-          mvn -B dependency:go-offline
-      
-      - name: Resolve Logback POM
-        run: |
-          mvn -B dependency:get \
+          mkdir -p "$HOME/.m2/repository"
+
+          mvn -B -ntp dependency:go-offline
+
+          mvn -B -ntp dependency:get \
             -Dartifact=ch.qos.logback:logback-classic:1.2.3:pom \
             -Dtransitive=false
 
-      - name: 'License Finder'
+      - name: Validate Maven Repository
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          REPO=$(mvn -q help:evaluate \
+            -Dexpression=settings.localRepository \
+            -DforceStdout)
+
+          printf 'Maven repository: [%s]\n' "$REPO"
+
+          case "$REPO" in
+            /*)
+              echo "Maven returned an absolute repository path"
+              ;;
+            *)
+              echo "::error::Invalid Maven repository path"
+              echo "License Finder cannot resolve dependency POMs."
+              exit 1
+              ;;
+          esac
+
+          POM="$REPO/ch/qos/logback/logback-classic/1.2.3/logback-classic-1.2.3.pom"
+
+          if [ ! -f "$POM" ]; then
+            echo "::error::Logback POM not found: $POM"
+            exit 1
+          fi
+
+          echo "Logback POM verified successfully"
+
+      - name: Run License Finder
         uses: jmservera/license-finder-action@main
         with:
           permitted-licenses: MIT,Apache-2.0,BSD,EPL1
-          approved-dependencies: |
-                                 hamcrest,hamcrest-core,hamcrest-library
-                                 junit-jupiter,junit-jupiter-api,junit-jupiter-engine,javax.annotation-api
-      - name: Publish Test Results
-        uses: EnricoMi/publish-unit-test-result-action@v2.2.0
-        if: always()
-        with:
-          junit_files: "license_finder_report.xml"
-          check_name: "License Compliance Check"
+          approved-dependencies: >-
+            hamcrest,hamcrest-core,hamcrest-library,
+            junit-jupiter,junit-jupiter-api,
+            junit-jupiter-engine,javax.annotation-api
+          report-name: license_finder_report.xml
 
-      - name: 'Upload Dependency Review Report'
+      - name: Publish License Compliance Results
+        if: ${{ !cancelled() && hashFiles('license_finder_report.xml') != '' }}
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        with:
+          files: license_finder_report.xml
+          check_name: License Compliance Check
+          check_run: 'false'
+          comment_mode: off
+          job_summary: 'true'
+
+      - name: Upload License Compliance Report
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: license-finder-report
-          path: ${{ github.workspace }}/license_finder_report.xml
+          path: license_finder_report.xml
+          if-no-files-found: warn
+
