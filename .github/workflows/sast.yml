@@ -84,7 +84,7 @@ jobs:
         dependenciesPath: ~/.m2
         basePath: src/main/java
     - name: Upload SpotBugs report
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v7
       with:
         name: spotbugs.sarif
         path: ${{github.workspace}}/results.sarif
