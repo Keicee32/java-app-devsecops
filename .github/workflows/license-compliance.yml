@@ -24,6 +24,20 @@ jobs:
           java-version: '17'
           cache: maven
 
+      - name: Configure Maven Local Repository
+        shell: bash
+        run: |
+          mkdir -p "$HOME/.m2/repository"
+
+          cat > "$HOME/.m2/settings.xml" <<EOF
+          <settings xmlns="http://maven.apache.org/SETTINGS/1.2.0">
+          <localRepository>${HOME}/.m2/repository</localRepository>
+          </settings>
+          EOF
+
+          echo "Maven repository configured:"
+          cat "$HOME/.m2/settings.xml"
+
       # License Finder automatically prefers mvnw if present.
       # Use the runner's installed Maven for this scan.
       - name: Use System Maven

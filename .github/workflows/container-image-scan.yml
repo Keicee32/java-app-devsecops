@@ -15,9 +15,7 @@ on:
         required: true
 env:
   REGISTRY: ghcr.io
-  IMAGE_TAG: ${{ inputs.image-tag || github.event.inputs.image-tag }}
-
-
+  IMAGE_TAG: ${{ inputs.inputs.image-tag || github.event.inputs.image-tag }}
 
 jobs:
   container-image-scan:
@@ -34,20 +32,17 @@ jobs:
       - name: Pull Image to Scan
         run: docker pull ${{ env.IMAGE_TAG }}
 
-      - name: Install Official Trivy Binary via Script
+      # Install Trivy through the official Apt repository system
+      - name: Install Official Trivy via APT Repository
         run: |
-          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh -o install.sh
-          chmod +x install.sh
-          sudo ./install.sh -b /usr/bin v0.50.0
+          sudo apt-get update
+          sudo apt-get install -y wget apt-transport-https gnupg lsb-release
+          wget -qO - https://github.io | gpg --dearmor | sudo tee /usr/share/keyrings/trivy.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/trivy.gpg] https://github.io $(lsb-release -sc) main" | sudo tee /etc/apt/sources.list.dev/trivy.list
+          sudo apt-get update
+          sudo apt-get install -y trivy
 
-      # Download and install the specific native Linux binary release safely
-      #- name: Install Official Trivy Binary
-      #  run: |
-      #    wget https://github.com
-      #    sudo dpkg -i trivy_0.50.0_Linux-64bit.deb
-
-      # Download the template and execute the binary locally on the host machine
-
+      # Download the template and execute the binary directly from system paths
       - name: Run Trivy Binary Scan
         run: |
           wget -q https://githubusercontent.com
