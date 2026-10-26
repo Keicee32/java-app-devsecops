@@ -34,11 +34,14 @@ jobs:
       - name: Pull Image to Scan
         run: docker pull ${{ env.IMAGE_TAG }}
 
-      # Download and install the specific native Linux binary release safely
-      - name: Install Official Trivy Binary
+      - name: Install Official Trivy Binary via Script
         run: |
-          wget https://github.com
-          sudo dpkg -i trivy_0.50.0_Linux-64bit.deb
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin v0.50.0
+      # Download and install the specific native Linux binary release safely
+      #- name: Install Official Trivy Binary
+      #  run: |
+      #    wget https://github.com
+      #    sudo dpkg -i trivy_0.50.0_Linux-64bit.deb
 
       # Download the template and execute the binary locally on the host machine
       - name: Run Trivy Binary Scan
