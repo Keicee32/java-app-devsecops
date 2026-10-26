@@ -34,11 +34,11 @@ jobs:
     - name: Test with Maven
       run: mvn test
     - run: mkdir test-results && cp target/*-reports/TEST-*.xml test-results
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v7
       with:
         name: Application-Binary
         path: candidate-binary
-    - uses: actions/upload-artifact@v3
+    - uses: actions/upload-artifact@v7
       with:
         name: Test-Results
         path: test-results
