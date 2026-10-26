@@ -30,7 +30,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - run: docker pull ${{ env.IMAGE_TAG }}
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.7.1
+        uses: aquasecurity/trivy-action@e644b88afbe1199321e067c293673059ba6d412e
         with:
           image-ref: ${{ env.IMAGE_TAG }}
           format: 'template'
@@ -42,3 +42,4 @@ jobs:
         uses: github/codeql-action/upload-sarif@v2
         with:
           sarif_file: 'trivy-results.sarif'
+
