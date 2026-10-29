@@ -27,21 +27,24 @@ jobs:
           cache: maven
 
       # Update Maven dependency versions before building
-      - name: Update Maven Packages
-        run: |
-          echo "Updating parent POM..."
-          mvn -B versions:update-parent \
-            -DgenerateBackupPoms=false
+#      - name: Update Maven Packages
+#        run: |
+#          echo "Updating parent POM..."
+#          mvn -B versions:update-parent \
+#            -DgenerateBackupPoms=false
 
-          echo "Updating dependency version properties..."
-          mvn -B versions:update-properties \
-            -DgenerateBackupPoms=false
+#          echo "Updating dependency version properties..."
+#          mvn -B versions:update-properties \
+#            -DgenerateBackupPoms=false
 
-          echo "Updating Maven dependencies and build plugins..."
-          mvn -B versions:use-latest-releases \
-            -DprocessPlugins=true \
-            -DprocessPluginDependencies=true \
-            -DgenerateBackupPoms=false
+#          echo "Updating Maven dependencies and build plugins..."
+#          mvn -B versions:use-latest-releases \
+#            -DprocessPlugins=true \
+#            -DprocessPluginDependencies=true \
+#            -DgenerateBackupPoms=false
+
+      - name: Check Maven Dependency Updates
+        run: mvn -B versions:display-dependency-updates
 
       # Compile, package, and run tests
       - name: Build and Test with Maven
