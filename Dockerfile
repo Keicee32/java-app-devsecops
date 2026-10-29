@@ -1,4 +1,4 @@
-FROM openjdk:11-jre-alpine3.12
+FROM eclipse-temurin:17-jre-noble
 
 VOLUME /tmp
 COPY target/*.jar app.jar
