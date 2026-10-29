@@ -59,7 +59,7 @@ jobs:
           scan-type: 'image'
           image-ref: ${{ env.IMAGE_TAG }}
           output: trivy-results.sarif
-          format: 'table'
+          format: 'sarif'
           exit-code: '1'
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
