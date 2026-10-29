@@ -1,4 +1,4 @@
-FROM adoptopenjdk/openjdk13:alpine
+FROM openjdk:11-jre-alpine3.12
 
 VOLUME /tmp
 COPY target/*.jar app.jar
