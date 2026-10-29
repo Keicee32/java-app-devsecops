@@ -64,6 +64,16 @@ jobs:
           ignore-unfixed: true
           severity: 'CRITICAL,HIGH'
 
+      - name: Validate Trivy SARIF Report
+        if: always()
+        run: |
+          if [ ! -s trivy-results.sarif ]; then
+            echo "::error::Trivy SARIF report is missing or empty"
+            exit 1
+          fi
+
+          jq -e '.version and .runs' trivy-results.sarif > /dev/null
+          echo "SARIF report is valid JSON."
 
       - name: Upload Trivy scan results to GitHub Security tab
         uses: github/codeql-action/upload-sarif@v3
